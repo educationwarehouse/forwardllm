@@ -27,6 +27,25 @@ model_mapping = {"llama2": "meta-llama/llama-2-13b-chat", "mistral": "mistralai/
 app = Flask(__name__)
 
 
+def generate_stream(for_what_function:callable, completion: Stream[ChatCompletionChunk], model:str):
+    for chunk in completion:
+        if chunk.choices[0].delta.content is not None:
+            response = {"model": model, "created_at": str(datetime.datetime.now().timestamp()), "done": False}
+            if for_what_function == chat:
+                response |= {"message": {"role": "assistant", "content": chunk.choices[0].delta.content}}
+            else:
+                response |= {"response": chunk.choices[0].delta.content}
+            yield f'{json.dumps(response)}\n'
+
+    # Send final done message
+    final_response = {"model": model, "created_at": str(datetime.datetime.now().timestamp()), "done": True}
+    if for_what_function == chat:
+        final_response |= {"response": ""}
+    else:
+        final_response |= {"message": {"role": "assistant", "content": ""}}
+    yield f'{json.dumps(final_response)}\n'
+
+
 @app.route("/api/generate", methods=["POST"])
 def generate():
     """
@@ -85,18 +104,7 @@ def generate():
             ollama_response = {"model": model, "created_at": str(completion.created), "response": completion.choices[0].message.content, "done": True}
             return jsonify(ollama_response)
         else:
-            def generate():
-                for chunk in completion:
-                    if chunk.choices[0].delta.content is not None:
-                        response = {"model": model, "created_at": str(datetime.datetime.now().timestamp()), "response": chunk.choices[0].delta.content,
-                                    "done": False}
-                        yield f'{json.dumps(response)}\n'
-
-                # Send final done message
-                final_response = {"model": model, "created_at": str(datetime.datetime.now().timestamp()), "response": "", "done": True}
-                yield f'{json.dumps(final_response)}\n'
-
-            return Response(stream_with_context(generate()), mimetype='text/event-stream')
+            return Response(stream_with_context(generate_stream(completion, model)), mimetype='text/event-stream')
 
     except Exception as e:
         raise
@@ -129,22 +137,17 @@ def chat():
     try:
         # Get request data
         data = request.json
-        print(data)
+        print(json.dumps(data,indent=2))
         # Extract parameters from Ollama request
-        model = data.get("model", "openai/gpt-3.5-turbo")  # Default to GPT-3.5 if not specified
+        model = data.get("model", "openai/gpt-4.1-nano")  # Default to GPT-3.5 if not specified
         messages = data.get("messages", [])
         stream = data.get("stream", False)
         options = data.get("options", {})
 
         openrouter_model = model_mapping.get(model, model)
 
-        # Prepare OpenRouter request
-        openrouter_request = {"model": openrouter_model, "messages": messages,  # Forward relevant options
-                              "temperature": options.get("temperature", 0.7), "top_p": options.get("top_p", 0.9), "max_tokens": options.get("num_predict", -1),
-                              "stream": stream}
-
         # Set up extra headers for OpenRouter
-        extra_headers = {"HTTP-Referer": request.headers.get("HTTP-Referer", "https://localhost"), "X-Title": "Ollama to OpenRouter Proxy"}
+        extra_headers = {"HTTP-Referer": request.headers.get("HTTP-Referer", "https://github.com/educationwarehouse/forwardllm"), "X-Title": "Ollama to OpenRouter Proxy"}
 
         # Send request to OpenRouter using OpenAI client
         completion: ChatCompletion | Stream[ChatCompletionChunk] = client.chat.completions.create(extra_headers=extra_headers, model=openrouter_model,
@@ -155,23 +158,10 @@ def chat():
         if not stream:
             # Transform OpenAI client response to Ollama format
             assistant_message = {"role": "assistant", "content": completion.choices[0].message.content}
-
             ollama_response = {"model": model, "created_at": str(completion.created), "message": assistant_message, "done": True}
             return jsonify(ollama_response)
         else:
-            def generate():
-                for chunk in completion:
-                    if chunk.choices[0].delta.content is not None:
-                        response = {"model": model, "created_at": str(int(datetime.datetime.now().timestamp())),
-                                    "message": {"role": "assistant", "content": chunk.choices[0].delta.content}, "done": False}
-                        yield f'{json.dumps(response)}\n'
-
-                # Send final done message
-                final_response = {"model": model, "created_at": str(int(datetime.datetime.now().timestamp())), "message": {"role": "assistant", "content": ""},
-                                  "done": True}
-                yield f'{json.dumps(final_response)}\n'
-
-            return Response(stream_with_context(generate()), mimetype='text/event-stream')
+            return Response(stream_with_context(generate_stream(chat, completion, model)), mimetype='text/event-stream')
 
 
     except Exception as e:
