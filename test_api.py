@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Base URL for the API
-BASE_URL = "http://localhost:11435/api"
+BASE_URL = "http://localhost:11434/api"
 
 
 def test_generate():
@@ -121,6 +121,7 @@ def test_tags():
                 print(f"  - Family: {first_model.get('details', {}).get('family', 'N/A')}")
                 print(f"  - Parameter size: {first_model.get('details', {}).get('parameter_size', 'N/A')}")
                 print(f"  - Quantization level: {first_model.get('details', {}).get('quantization_level', 'N/A')}")
+                print(json.dumps(first_model, indent=2))
         else:
             print("❌ Response does not have the expected structure")
             print(f"Response: {json.dumps(result, indent=2)}")
@@ -141,6 +142,6 @@ if __name__ == "__main__":
     # test_generate()
     test_generate_stream()
     # test_chat()
-    # test_tags()
+    test_tags()
 
     print("\nTests completed!")
