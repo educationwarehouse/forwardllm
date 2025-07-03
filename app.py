@@ -24,10 +24,16 @@ model_mapping = {"llama2": "meta-llama/llama-2-13b-chat", "mistral": "mistralai/
                  # Add more mappings as needed
                  }
 
+
+def extra_headers():
+    "Showing where the request comes from, or defaulting to the github repo for clarity in billing."
+    return {"HTTP-Referer": request.headers.get("HTTP-Referer", "https://github.com/educationwarehouse/forwardllm"), "X-Title": "Ollama to OpenRouter Proxy"}
+
+
 app = Flask(__name__)
 
 
-def generate_stream(for_what_function:callable, completion: Stream[ChatCompletionChunk], model:str):
+def generate_stream(for_what_function: callable, completion: Stream[ChatCompletionChunk], model: str):
     for chunk in completion:
         if chunk.choices[0].delta.content is not None:
             response = {"model": model, "created_at": str(datetime.datetime.now().timestamp()), "done": False}
@@ -49,30 +55,18 @@ def generate_stream(for_what_function:callable, completion: Stream[ChatCompletio
 @app.route("/api/generate", methods=["POST"])
 def generate():
     """
-    Handle Ollama-style generate requests and forward to OpenRouter
+    Handle generation requests by forwarding them to the OpenRouter API.
 
-    Ollama API format:
-    {
-        "model": "llama2",
-        "prompt": "Why is the sky blue?",
-        "stream": false,
-        "options": {
-            "temperature": 0.7,
-            "top_p": 0.9,
-            ...
-        }
-    }
+    This endpoint accepts a JSON payload containing a model name, prompt text, streaming preference,
+    and generation options. It maps the requested model to an OpenRouter-compatible model, sends the
+    completion request, and returns the response in Ollama-compatible format.
 
-    OpenRouter API format:
-    {
-        "model": "openai/gpt-3.5-turbo",
-        "messages": [
-            {"role": "user", "content": "Why is the sky blue?"}
-        ],
-        "temperature": 0.7,
-        "top_p": 0.9,
-        ...
-    }
+    Returns:
+        JSON response containing the generated text and metadata if not streaming.
+        A streaming response if stream=True, yielding partial completion chunks.
+
+    Error Handling:
+        Raises the original exception and returns a JSON error message with HTTP status 500 if an exception occurs.
     """
     try:
         # Get request data
@@ -85,17 +79,9 @@ def generate():
 
         openrouter_model = model_mapping.get(model, model)
 
-        # Prepare OpenRouter request
-        openrouter_request = {"model": openrouter_model, "messages": [{"role": "user", "content": prompt}],  # Forward relevant options
-            "temperature": options.get("temperature", 0.7), "top_p": options.get("top_p", 0.9), "max_tokens": options.get("num_predict", -1),
-            "stream": stream}
-
-        # Set up extra headers for OpenRouter
-        extra_headers = {"HTTP-Referer": request.headers.get("HTTP-Referer", "https://localhost"), "X-Title": "Ollama to OpenRouter Proxy"}
-
         prompt = prompt or '?'
         # Send request to OpenRouter using OpenAI client
-        completion = client.chat.completions.create(extra_headers=extra_headers, model=openrouter_model, messages=[{"role": "user", "content": prompt}],
+        completion = client.chat.completions.create(extra_headers=extra_headers(), model=openrouter_model, messages=[{"role": "user", "content": prompt}],
                                                     temperature=options.get("temperature", 0.7), top_p=options.get("top_p", 0.9),
                                                     max_tokens=options.get("num_predict", -1), stream=stream)
 
@@ -114,30 +100,23 @@ def generate():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     """
-    Handle Ollama-style chat requests and forward to OpenRouter
+    Handle chat requests by forwarding them to the OpenRouter API.
 
-    Ollama API format:
-    {
-        "model": "llama2",
-        "messages": [
-            {"role": "user", "content": "Hello, how are you?"},
-            {"role": "assistant", "content": "I'm doing well, thank you!"},
-            {"role": "user", "content": "Tell me a joke."}
-        ],
-        "stream": false,
-        "options": {
-            "temperature": 0.7,
-            "top_p": 0.9,
-            ...
-        }
-    }
+    This endpoint accepts a JSON payload containing model details, messages, streaming preference, and options.
+    It maps the requested model to an OpenRouter-compatible model, sends the chat completion request,
+    and returns the response in Ollama-compatible format.
 
-    OpenRouter API format is similar but may have different parameter names
+    Returns:
+        JSON response containing the assistant's message and metadata if not streaming.
+        A streaming response if stream=True, yielding partial chat completion chunks.
+
+    Error Handling:
+        Returns a JSON error message with HTTP status 500 if an exception occurs.
     """
     try:
         # Get request data
         data = request.json
-        print(json.dumps(data,indent=2))
+        print(json.dumps(data, indent=2))
         # Extract parameters from Ollama request
         model = data.get("model", "openai/gpt-4.1-nano")  # Default to GPT-3.5 if not specified
         messages = data.get("messages", [])
@@ -147,10 +126,9 @@ def chat():
         openrouter_model = model_mapping.get(model, model)
 
         # Set up extra headers for OpenRouter
-        extra_headers = {"HTTP-Referer": request.headers.get("HTTP-Referer", "https://github.com/educationwarehouse/forwardllm"), "X-Title": "Ollama to OpenRouter Proxy"}
 
         # Send request to OpenRouter using OpenAI client
-        completion: ChatCompletion | Stream[ChatCompletionChunk] = client.chat.completions.create(extra_headers=extra_headers, model=openrouter_model,
+        completion: ChatCompletion | Stream[ChatCompletionChunk] = client.chat.completions.create(extra_headers=extra_headers(), model=openrouter_model,
                                                                                                   messages=messages,
                                                                                                   temperature=options.get("temperature", 0.7),
                                                                                                   top_p=options.get("top_p", 0.9),
@@ -257,13 +235,23 @@ def list_tags():
 @app.route("/", methods=["GET"])
 def index():
     """
-    Root endpoint that provides basic information about the API
+    Root endpoint providing API metadata.
+
+    Returns a JSON object containing the name, description, version, and a list of available endpoints
+    for the Ollama to OpenRouter Proxy server. This can be used as a simple health or info check.
+
+    Example response:
+    {
+        "name": "Ollama to OpenRouter Proxy",
+        "description": "A proxy server that forwards Ollama API requests to OpenRouter",
+        "version": "1.0.0",
+        "endpoints": ["/api/generate", "/api/chat", "/api/models", "/api/tags"]
+    }
     """
+
     info = {"name": "Ollama to OpenRouter Proxy", "description": "A proxy server that forwards Ollama API requests to OpenRouter", "version": "1.0.0",
             "endpoints": ["/api/generate", "/api/chat", "/api/models", "/api/tags"]}
-
     return jsonify(info)
-
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 11434))  # Default Ollama port is 11434
