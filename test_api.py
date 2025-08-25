@@ -1,10 +1,12 @@
-#!/usr/bin/env python3
+#!.venv/bin/python3
 """
 Simple test script to verify the Ollama to OpenRouter proxy is working correctly.
 """
-import os
-import requests
+
 import json
+import os
+
+import requests
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -22,10 +24,7 @@ def test_generate():
         "model": "gpt-3.5-turbo",
         "prompt": "Tell me a short joke about programming",
         "stream": False,
-        "options": {
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
+        "options": {"temperature": 0.7, "top_p": 0.9},
     }
 
     print(f"Sending request to generate endpoint with model: {data['model']}")
@@ -46,7 +45,12 @@ def test_generate_stream():
     """Test the /api/generate endpoint with streaming enabled"""
     print("\n=== Testing /api/generate with streaming ===")
 
-    data = {"model": "gpt-3.5-turbo", "prompt": "Count from 1 to 5 slowly", "stream": True, "options": {"temperature": 0.7, "top_p": 0.9}}
+    data = {
+        "model": "gpt-3.5-turbo",
+        "prompt": "Count from 1 to 5 slowly",
+        "stream": True,
+        "options": {"temperature": 0.7, "top_p": 0.9},
+    }
 
     print(f"Sending request to generate endpoint with model: {data['model']}")
     print(f"Prompt: {data['prompt']}")
@@ -59,7 +63,11 @@ def test_generate_stream():
             if line:
                 try:
                     json_response = json.loads(line)
-                    print(f"Stream chunk: {json_response.get('response', '')}", end='', flush=True)
+                    print(
+                        f"Stream chunk: {json_response.get('response', '')}",
+                        end="",
+                        flush=True,
+                    )
                 except json.JSONDecodeError:
                     print(f"Failed to parse JSON: {line}")
         print("\nStream completed")
@@ -77,13 +85,10 @@ def test_chat():
         "messages": [
             {"role": "user", "content": "Hello, how are you?"},
             {"role": "assistant", "content": "I'm doing well, thank you!"},
-            {"role": "user", "content": "Tell me a short joke about programming."}
+            {"role": "user", "content": "Tell me a short joke about programming."},
         ],
         "stream": False,
-        "options": {
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
+        "options": {"temperature": 0.7, "top_p": 0.9},
     }
 
     print(f"Sending request to chat endpoint with model: {data['model']}")
@@ -98,6 +103,7 @@ def test_chat():
     else:
         print(f"❌ Failed to get chat response: {response.status_code}")
         print(response.text)
+
 
 def test_tags():
     """Test the /api/tags endpoint"""
@@ -118,9 +124,15 @@ def test_tags():
                 first_model = models[0]
                 print(f"Example model: {first_model['name']}")
                 print(f"  - Size: {first_model.get('size', 'N/A')}")
-                print(f"  - Family: {first_model.get('details', {}).get('family', 'N/A')}")
-                print(f"  - Parameter size: {first_model.get('details', {}).get('parameter_size', 'N/A')}")
-                print(f"  - Quantization level: {first_model.get('details', {}).get('quantization_level', 'N/A')}")
+                print(
+                    f"  - Family: {first_model.get('details', {}).get('family', 'N/A')}"
+                )
+                print(
+                    f"  - Parameter size: {first_model.get('details', {}).get('parameter_size', 'N/A')}"
+                )
+                print(
+                    f"  - Quantization level: {first_model.get('details', {}).get('quantization_level', 'N/A')}"
+                )
                 print(json.dumps(first_model, indent=2))
         else:
             print("❌ Response does not have the expected structure")
@@ -128,6 +140,7 @@ def test_tags():
     else:
         print(f"❌ Failed to retrieve tags: {response.status_code}")
         print(response.text)
+
 
 if __name__ == "__main__":
     print("Testing Ollama to OpenRouter Proxy API")
