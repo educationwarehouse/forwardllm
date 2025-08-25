@@ -32,8 +32,10 @@ model_mapping = {
     # Add more mappings as needed
 }
 
+from typing import Dict
 
-def extra_headers():
+
+def extra_headers() -> Dict[str, str]:
     "Showing where the request comes from, or defaulting to the github repo for clarity in billing."
     return {
         "HTTP-Referer": request.headers.get(
