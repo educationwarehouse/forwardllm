@@ -14,9 +14,44 @@ A Flask web application that acts as an Ollama-compatible server and forwards re
 
 - Python 3.7+
 - OpenRouter API key (get one at [https://openrouter.ai/keys](https://openrouter.ai/keys))
+- Optionally, [uv](https://docs.astral.sh/uv/) for modern installation
 
-## Installation
+## Modern Installation and Usage (with uv)
 
+This is the recommended, streamlined way to run the app without manually managing virtual environments or pip:
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/ForwardLLM.git
+   cd ForwardLLM
+    ```
+
+2. Create a `.env` file with your OpenRouter API key:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then edit `.env` and replace `your_openrouter_api_key_here` with your OpenRouter API key.
+
+
+3. Run the app directly with `uv`:
+
+   ```bash
+   uv run app.py
+   ```
+
+`uv` will automatically:
+
+* Create a temporary isolated environment
+* Install dependencies (Flask, python-dotenv, OpenAI, etc.)
+* Run the proxy server
+
+---
+
+## Traditional Installation and Usage (venv + pip)
+
+If you prefer the classic way:
 1. Clone this repository:
    ```
    git clone https://github.com/yourusername/ForwardLLM.git
@@ -40,7 +75,7 @@ A Flask web application that acts as an Ollama-compatible server and forwards re
    ```
    Then edit the `.env` file and replace `your_openrouter_api_key_here` with your actual OpenRouter API key.
 
-## Usage
+### Usage
 
 1. Start the server:
    ```
@@ -82,21 +117,27 @@ A Flask web application that acts as an Ollama-compatible server and forwards re
    curl http://localhost:11434/api/models
    ```
 
+---
+
 ## Model Mapping
 
 The application maps common Ollama model names to their OpenRouter equivalents:
 
-- `llama2` → `meta-llama/llama-2-13b-chat`
-- `mistral` → `mistralai/mistral-7b-instruct`
+* `llama2` → `meta-llama/llama-2-13b-chat`
+* `mistral` → `mistralai/mistral-7b-instruct`
 
 You can also directly use OpenRouter model names like `openai/gpt-4` or `anthropic/claude-2`.
 
+---
+
 ## Configuration
 
-The following environment variables can be set in the `.env` file:
+Set the following environment variables in your `.env` file:
 
-- `OPENROUTER_API_KEY` (required): Your OpenRouter API key
-- `PORT` (optional): The port to run the server on (default: 11434)
+* `OPENROUTER_API_KEY` (required): Your OpenRouter API key
+* `PORT` (optional): The port to run the server on (default: 11434)
+
+---
 
 ## License
 

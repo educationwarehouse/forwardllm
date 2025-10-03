@@ -1,4 +1,13 @@
-#!.venv/bin/python3
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "flask>=3.1,<4.0",
+#   "requests>=2.32,<3.0",
+#   "python-dotenv>=1.1,<2.0",
+#   "openai>=1.93,<2.0",
+# ]
+# ///
 
 import datetime
 import json
