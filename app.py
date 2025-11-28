@@ -23,13 +23,16 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk
 load_dotenv()
 
 # Get API keys from environment variables
+OPENROUTER_ENDPOINT = os.getenv("OPENROUTER_ENDPOINT", "https://openrouter.ai/api/v1")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
 if not OPENROUTER_API_KEY:
     raise ValueError("OPENROUTER_API_KEY environment variable is required")
 
+
 # Initialize OpenAI client with OpenRouter base URL
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
+    base_url=OPENROUTER_ENDPOINT,
     api_key=OPENROUTER_API_KEY,
 )
 
