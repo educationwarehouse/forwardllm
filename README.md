@@ -12,7 +12,7 @@ A Flask web application that acts as an Ollama-compatible server and forwards re
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.10+
 - OpenRouter API key (get one at [https://openrouter.ai/keys](https://openrouter.ai/keys))
 - Optionally, [uv](https://docs.astral.sh/uv/) for modern installation
 

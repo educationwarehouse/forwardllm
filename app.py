@@ -12,6 +12,7 @@
 import datetime
 import json
 import os
+import typing
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, request, stream_with_context
@@ -41,10 +42,8 @@ model_mapping = {
     # Add more mappings as needed
 }
 
-from typing import Dict
 
-
-def extra_headers() -> Dict[str, str]:
+def extra_headers() -> dict[str, str]:
     "Showing where the request comes from, or defaulting to the github repo for clarity in billing."
     return {
         "HTTP-Referer": request.headers.get(
@@ -58,7 +57,9 @@ app = Flask(__name__)
 
 
 def generate_stream(
-    for_what_function: callable, completion: Stream[ChatCompletionChunk], model: str
+    for_what_function: typing.Callable[..., typing.Any],
+    completion: Stream[ChatCompletionChunk],
+    model: str,
 ):
     for chunk in completion:
         if chunk.choices[0].delta.content is not None:
