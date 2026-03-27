@@ -12,6 +12,7 @@
 import datetime
 import json
 import os
+import typing
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, request, stream_with_context
@@ -22,13 +23,16 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk
 load_dotenv()
 
 # Get API keys from environment variables
+OPENROUTER_ENDPOINT = os.getenv("OPENROUTER_ENDPOINT", "https://openrouter.ai/api/v1")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
 if not OPENROUTER_API_KEY:
     raise ValueError("OPENROUTER_API_KEY environment variable is required")
 
+
 # Initialize OpenAI client with OpenRouter base URL
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
+    base_url=OPENROUTER_ENDPOINT,
     api_key=OPENROUTER_API_KEY,
 )
 
@@ -41,10 +45,8 @@ model_mapping = {
     # Add more mappings as needed
 }
 
-from typing import Dict
 
-
-def extra_headers() -> Dict[str, str]:
+def extra_headers() -> dict[str, str]:
     "Showing where the request comes from, or defaulting to the github repo for clarity in billing."
     return {
         "HTTP-Referer": request.headers.get(
@@ -58,7 +60,9 @@ app = Flask(__name__)
 
 
 def generate_stream(
-    for_what_function: callable, completion: Stream[ChatCompletionChunk], model: str
+    for_what_function: typing.Callable[..., typing.Any],
+    completion: Stream[ChatCompletionChunk],
+    model: str,
 ):
     for chunk in completion:
         if chunk.choices[0].delta.content is not None:
